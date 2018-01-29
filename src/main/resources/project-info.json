@@ -1,0 +1,6 @@
+{
+	"name":"${project.name}",
+	"groupId":"${project.groupId}",
+	"artifactId":"${project.artifactId}",
+	"version":"${project.version}"
+}
