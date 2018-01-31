@@ -2,7 +2,6 @@ package com.fox.platform.channel.infra.serv;
 
 import com.fox.platform.channel.cfg.IConfigurationCore;
 import com.fox.platform.channel.dom.ent.Root;
-import com.fox.platform.channel.exc.ChannelException;
 import com.fox.platform.channel.utl.JsonUtils;
 import com.google.common.net.MediaType;
 
@@ -37,7 +36,7 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
       super.start(startFuture);
       vertx.eventBus().consumer(IConfigurationCore.EVENT_PROXY_CHANNEL, this::onMessage);
       future.complete();
-    } catch (ChannelException e) {
+    } catch (Exception e) {
       future.complete();
       LOGGER.error("***ERROR MESSAGE OPERATION ON: ", e);
     }
@@ -54,9 +53,6 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
       client = WebClient.create(vertx);
       jsonObject =JsonUtils.parserQuery(iConfigurationCore.getQueryOmnix(), message.body());
       executeClientWebOmnix(message);
-    } catch (ChannelException e) {
-      message.fail(e.hashCode(), e.getCause().getMessage());
-      LOGGER.error("***ERROR MESSAGE OPERATION ON: ", e);
     } catch (Exception ex) {
     	LOGGER.error("***ERROR MESSAGE OPERATION ON: ", ex);
       message.fail(ex.hashCode(), ex.getCause().getMessage());

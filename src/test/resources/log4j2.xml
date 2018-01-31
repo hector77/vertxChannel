@@ -9,7 +9,7 @@
     </Async>
   </Appenders>
   <Loggers>
-    <Root level="ALL">
+    <Root level="DEBUG">
       <AppenderRef ref="ASYNC"/>
     </Root>
   </Loggers>

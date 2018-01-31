@@ -3,14 +3,16 @@ package com.fox.platform.channel.dom.ent;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * JsonObject for Fields
  * @author hector.hidalgo
  *
  */
-@Data
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Fields {
 	@JsonProperty(value="Thumbnail")

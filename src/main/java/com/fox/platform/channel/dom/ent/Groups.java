@@ -6,14 +6,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * JsonObject for Groups
  * @author hector.hidalgo
  *
  */
-@Data
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "id", "enabled", "priority", "feeds", "fields" })
 public class Groups {

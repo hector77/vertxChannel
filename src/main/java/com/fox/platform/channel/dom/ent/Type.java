@@ -4,14 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * JsonObject for Type 
  * @author hector.hidalgo
  *
  */
-@Data
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "description"})
 public class Type {

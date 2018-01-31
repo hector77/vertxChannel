@@ -17,14 +17,5 @@ public class ChannelException extends RuntimeException {
     super(message);
   }
 
-  /**
-   * Contain root cause
-   * @param message
-   * @param cause root 
-   */
-  public ChannelException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
 
 }

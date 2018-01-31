@@ -7,14 +7,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * JsonObject for Hit
  * @author hector.hidalgo
  *
  */
-@Data
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "index", "type","id","score","source","sort"})
 public class Hit {

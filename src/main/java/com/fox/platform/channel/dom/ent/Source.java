@@ -6,15 +6,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * JsonObject for Source 
  * @author hector.hidalgo
  *
  */
-@Data
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({ "id", "code", "name", "publishDate", "lastUpdate", "isSocialPost", "type", "domain", "show","updatedOn","groups","feeds","categories" })
 public class Source {
