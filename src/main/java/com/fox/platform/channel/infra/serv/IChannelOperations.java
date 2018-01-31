@@ -1,5 +1,6 @@
 package com.fox.platform.channel.infra.serv;
 
+import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -8,6 +9,8 @@ import io.vertx.ext.web.RoutingContext;
  *
  */
 public interface IChannelOperations {
+	
+   String TEXT_MIMETYPE = MimeMapping.getMimeTypeForExtension("text");
 	
 	/**
 	 * Execute business Post Channel By Id Country 

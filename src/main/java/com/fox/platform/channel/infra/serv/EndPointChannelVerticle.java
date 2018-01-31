@@ -1,10 +1,13 @@
 package com.fox.platform.channel.infra.serv;
 
-import com.fox.platform.channel.cfg.impl.ConfigurationService;
+import com.fox.platform.channel.cfg.impl.VertxChannelModule;
+import com.google.common.net.HttpHeaders;
+import com.google.common.net.MediaType;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
@@ -27,11 +30,11 @@ public class EndPointChannelVerticle extends ApplicationVerticle implements Conf
 	
 		Future<Void> startFuture = Future.future();
 		super.start(startFuture);
-		Guice.createInjector(new ConfigurationService(vertx)).injectMembers(this);
+		Guice.createInjector(new VertxChannelModule(vertx)).injectMembers(this);
 		startFuture.setHandler(handler -> {
 			if (handler.succeeded()) {
 				LOGGER.debug("***STARTING HTTP SERVICE....**** ");
-				router= ConfigurationEndpoint.configureRouter(router,vertx);
+				router= configureRouter(router,vertx);
 				mappingRestApi();
 				runHttpServer(future);
 			} else {
@@ -56,6 +59,21 @@ public class EndPointChannelVerticle extends ApplicationVerticle implements Conf
 						future.fail(response.cause());
 					}
 				});
+	}
+
+	@Override
+	public Router configureRouter(Router router, Vertx vertx) {
+		router = Router.router(vertx);
+		router.route().handler(ctx -> {
+			ctx.response().putHeader(HttpHeaders.CACHE_CONTROL,NO_STORE);
+			ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString());
+			ctx.next();
+		});
+		router.route(ROOT_ROUTER)
+        .produces(MediaType.JSON_UTF_8.toString())
+        .consumes(MediaType.JSON_UTF_8.toString());
+		
+		return router;
 	}
 	
 }

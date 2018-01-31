@@ -12,7 +12,7 @@ import io.vertx.core.eventbus.EventBus;
  * @author hector.hidalgo
  *
  */
-public class ConfigurationService extends AbstractModule {
+public class VertxChannelModule extends AbstractModule {
 
 	private Vertx vertx;
 
@@ -20,7 +20,7 @@ public class ConfigurationService extends AbstractModule {
 	 * Constructor for vertx
 	 * @param vertx
 	 */
-	public ConfigurationService(Vertx vertx) {
+	public VertxChannelModule(Vertx vertx) {
 		this.vertx = vertx;
 	}
 	

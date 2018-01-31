@@ -6,6 +6,7 @@ import com.fox.platform.channel.utl.JsonUtils;
 import com.google.common.net.MediaType;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpHeaders;
@@ -50,7 +51,6 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
 
     try {
       LOGGER.debug("*** EXECUTE onMessage WS ON OMNIX SERVICE  ***");
-      client = WebClient.create(vertx);
       jsonObject =JsonUtils.parserQuery(iConfigurationCore.getQueryOmnix(), message.body());
       executeClientWebOmnix(message);
     } catch (Exception ex) {
@@ -64,6 +64,7 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
    * @param message parameters from Request rest service
    */
   public void executeClientWebOmnix(Message<String> message) {
+	  client = createWebClient(vertx);
 	  client.post(iConfigurationCore.getPortOmnix(), iConfigurationCore.getHostOmnix(), iConfigurationCore.getUriOmnix())
       .ssl(true).putHeader(HttpHeaders.CONTENT_LENGTH.toString(), LENGTH)
       .putHeader(HttpHeaders.CONTENT_TYPE.toString(), MediaType.JSON_UTF_8.toString())
@@ -79,5 +80,15 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
         }
       });
 	  client.close();
+  }
+  
+  /**
+   * Create a WebClient 
+   * @param vertx value
+   * @return WebClient client
+   */
+  public WebClient createWebClient(Vertx vertx){
+	return  WebClient.create(vertx);
+	  
   }
 }

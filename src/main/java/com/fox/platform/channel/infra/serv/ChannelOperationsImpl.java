@@ -6,9 +6,9 @@ import com.fox.platform.channel.cfg.IConfigurationCore;
 import com.fox.platform.channel.exc.ChannelException;
 import com.google.inject.Inject;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -22,7 +22,7 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class ChannelOperationsImpl  implements IChannelOperations {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ChannelOperationsImpl.class);
-	private static final String TEXT_MIMETYPE = MimeMapping.getMimeTypeForExtension("text");
+	
 	private Vertx vertx;
 	private String countryId;
 	
@@ -42,17 +42,23 @@ public class ChannelOperationsImpl  implements IChannelOperations {
 			vertx.eventBus().send(IConfigurationCore.EVENT_PROXY_CHANNEL, countryId, response -> {
 
 				if (response.succeeded()) {
-					routingContext.response().setStatusCode(200)
+					routingContext.response().setStatusCode(HttpResponseStatus.OK.code())
 							.end(new JsonObject(response.result().body().toString()).encodePrettily());
 				} else {
 					LOGGER.error("ERROR PROCESSING CONEXION TO WS CHANEL ON: ", response.cause());
-					routingContext.response().setStatusCode(500).putHeader(HttpHeaders.CONTENT_TYPE, TEXT_MIMETYPE)
-							.end(response.cause().getStackTrace().toString());
+					routingContext
+					.response()
+					.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+					.putHeader(HttpHeaders.CONTENT_TYPE, TEXT_MIMETYPE)
+					.end(response.cause().getStackTrace().toString());
 				}
 			});
 		} catch (Exception e) {
-			routingContext.response().setStatusCode(500).putHeader(HttpHeaders.CONTENT_TYPE, TEXT_MIMETYPE)
-					.end(e.getMessage());
+			routingContext
+			.response()
+			.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+			.putHeader(HttpHeaders.CONTENT_TYPE, TEXT_MIMETYPE)
+			.end(e.getMessage());
 			LOGGER.error("ERROR ON POST ChannelByCountry: ", e);
 		}
 	}	
