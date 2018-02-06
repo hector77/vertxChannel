@@ -59,4 +59,6 @@ public interface IConfigurationCore extends ServiceConfig {
 	  * @return hostOmnix
 	  */
 	 String getHostOmnix();
+	 
+	 ContentProxyConfig getProxyVMS();
 }

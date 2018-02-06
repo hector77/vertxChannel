@@ -1,9 +1,17 @@
 package com.fox.platform.channel.infra.serv;
 
+import com.fox.platform.channel.cfg.ContentProxyConfig;
 import com.fox.platform.channel.cfg.IConfigurationCore;
+import com.fox.platform.channel.cfg.impl.VMSModule;
+import com.fox.platform.channel.cfg.impl.VertxChannelModule;
 import com.fox.platform.channel.dom.ent.Root;
 import com.fox.platform.channel.utl.JsonUtils;
+import com.fox.platform.lib.cbr.SwitchCircuitBreaker;
+import com.fox.platform.lib.cbr.fac.CircuitBreakerFactory;
+import com.fox.platform.lib.fac.WebClientFactory;
 import com.google.common.net.MediaType;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -26,8 +34,11 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
   private static final Logger LOGGER = LoggerFactory.getLogger(ProxyChannelVerticle.class);
   private static final String LENGTH = "0";
   
+  protected ContentProxyConfig proxyVMSConfig;
+  
   private WebClient client;
   private JsonObject jsonObject;
+
 
   @Override
   public void start(Future<Void> future) throws Exception {
@@ -35,6 +46,12 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
     try {
       Future<Void> startFuture = Future.future();
       super.start(startFuture);
+    	proxyVMSConfig = iConfigurationCore.getProxyVMS();
+    	//if(proxyVMSConfig!=null) {
+    		 Guice.createInjector(new VMSModule(vertx,proxyVMSConfig)).injectMembers(this);
+    		  LOGGER.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% DEPENDECIA EXITO: "+proxyVMSConfig.getCircuitBreaker().getName()+"%%%%%%%%%%%%%%%%%%%%% ");
+    	//}
+  	
       vertx.eventBus().consumer(IConfigurationCore.EVENT_PROXY_CHANNEL, this::onMessage);
       future.complete();
     } catch (Exception e) {

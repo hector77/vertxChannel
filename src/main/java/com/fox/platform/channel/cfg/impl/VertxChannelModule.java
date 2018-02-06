@@ -2,6 +2,8 @@ package com.fox.platform.channel.cfg.impl;
 
 import com.fox.platform.channel.infra.serv.ChannelOperationsImpl;
 import com.fox.platform.channel.infra.serv.IChannelOperations;
+import com.fox.platform.lib.fac.WebClientFactory;
+import com.fox.platform.lib.fac.WebClientFactoryImpl;
 import com.google.inject.AbstractModule;
 
 import io.vertx.core.Vertx;

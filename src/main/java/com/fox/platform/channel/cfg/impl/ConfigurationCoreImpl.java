@@ -24,6 +24,11 @@ public class ConfigurationCoreImpl implements IConfigurationCore {
 	private String evenBusProxy;
 	private String rootPath;
 	private HttpMethod postMethod;
+	private ProxyVMSConfigImpl proxyVMS;
+	
+	public ConfigurationCoreImpl() {
+		this.proxyVMS = new ProxyVMSConfigImpl();
+	}
 
 	@Override
 	public String getApiRestPath() {
@@ -61,4 +66,10 @@ public class ConfigurationCoreImpl implements IConfigurationCore {
 	public HttpServerOptions getHttpServerOptions() {
 		return httpServerOptions;
 	}
+	
+	public ProxyVMSConfigImpl getProxyVMS() {
+		return proxyVMS;
+	}
+	
+	
 }
