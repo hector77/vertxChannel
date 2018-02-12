@@ -3,16 +3,19 @@ package com.fox.platform.channel.infra.serv;
 import com.fox.platform.channel.cfg.ContentProxyConfig;
 import com.fox.platform.channel.cfg.IConfigurationCore;
 import com.fox.platform.channel.cfg.impl.VMSModule;
-import com.fox.platform.channel.cfg.impl.VertxChannelModule;
 import com.fox.platform.channel.dom.ent.Root;
-import com.fox.platform.channel.utl.JsonUtils;
+import com.fox.platform.channel.vo.MPXResponse;
 import com.fox.platform.lib.cbr.SwitchCircuitBreaker;
+import com.fox.platform.lib.cbr.exc.KillswitchException;
 import com.fox.platform.lib.cbr.fac.CircuitBreakerFactory;
-import com.fox.platform.lib.fac.WebClientFactory;
 import com.google.common.net.MediaType;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.newrelic.api.agent.NewRelic;
+import com.newrelic.api.agent.Trace;
 
+import io.vertx.circuitbreaker.CircuitBreakerState;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -35,52 +38,68 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
   private static final String LENGTH = "0";
   
   protected ContentProxyConfig proxyVMSConfig;
-  
+  private SwitchCircuitBreaker circuitBreaker;
   private WebClient client;
   private JsonObject jsonObject;
+  @Inject
+  private CircuitBreakerFactory circuitBreakerFactory;
 
+  public void start(Future<Void> future) throws Exception {
+	    try {
+	      Future<Void> startFuture = Future.future();
+	      super.start(startFuture);
+	      startFuture.setHandler(handler -> {
+	        if (handler.succeeded()) {
+	          proxyVMSConfig = iConfigurationCore.getProxyVMS();
+	          LOGGER.info(
+	              "Starting ProxyVerticle with config: " + JsonObject.mapFrom(proxyVMSConfig).encode());
+
+	          Guice.createInjector(new VMSModule(vertx, proxyVMSConfig)).injectMembers(this);
+	          circuitBreaker = circuitBreakerFactory.createCircuitBreaker();
+
+					vertx.eventBus().<JsonObject>consumer(IConfigurationCore.EVENT_PROXY_CHANNEL,
+	              request -> circuitBreaker
+	                  .<MPXResponse>executeWithKillswitch(
+	                      circuitFuture -> executeCall(circuitFuture, request),
+	                      this::replyOnCircuitOpen, this::replyOnKillswitch)
+	                  .setHandler(result -> proccessResponse(result, request)));
+
+	          future.complete();
+
+	        } else {
+	        	LOGGER.error(deploymentID() + " Error launching ProxyChannelVerticle: "
+	              + handler.cause().getMessage(), handler.cause());
+	          future.fail(handler.cause());
+	        }
+
+
+	      });
+
+	    } catch (Exception e) {
+	      future.fail(e);
+	      LOGGER.error("ERROR PROXY", e);
+	    }
+
+
+	  }
 
   @Override
-  public void start(Future<Void> future) throws Exception {
-
-    try {
-      Future<Void> startFuture = Future.future();
-      super.start(startFuture);
-    	proxyVMSConfig = iConfigurationCore.getProxyVMS();
-    	//if(proxyVMSConfig!=null) {
-    		 Guice.createInjector(new VMSModule(vertx,proxyVMSConfig)).injectMembers(this);
-    		  LOGGER.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% DEPENDECIA EXITO: "+proxyVMSConfig.getCircuitBreaker().getName()+"%%%%%%%%%%%%%%%%%%%%% ");
-    	//}
-  	
-      vertx.eventBus().consumer(IConfigurationCore.EVENT_PROXY_CHANNEL, this::onMessage);
-      future.complete();
-    } catch (Exception e) {
-      future.complete();
-      LOGGER.error("***ERROR MESSAGE OPERATION ON: ", e);
+  public void onConfigChange() {
+    super.onConfigChange();
+    if (circuitBreaker.getOptions().isKillswitch() != proxyVMSConfig.getCircuitBreaker()
+        .isKillswitch()) {
+      circuitBreaker.getOptions().setKillswitch(proxyVMSConfig.getCircuitBreaker().isKillswitch());
     }
   }
-  
-  /**
-   * Get message from WebClient 
-   * @param message parameters from Request rest service
-   */
-  public void onMessage(Message<String> message) {
 
-    try {
-      LOGGER.debug("*** EXECUTE onMessage WS ON OMNIX SERVICE  ***");
-      jsonObject =JsonUtils.parserQuery(iConfigurationCore.getQueryOmnix(), message.body());
-      executeClientWebOmnix(message);
-    } catch (Exception ex) {
-    	LOGGER.error("***ERROR MESSAGE OPERATION ON: ", ex);
-      message.fail(ex.hashCode(), ex.getCause().getMessage());
-    }
-  }
-  
   /**
-   * Execute WebClient to Omnix
-   * @param message parameters from Request rest service
+   * Perform the request to MPX endpoint uses Vert.x Web Client
+   * 
+   * @param future object with the result of the call
+   * @param request Message receives through event bus
    */
-  public void executeClientWebOmnix(Message<String> message) {
+  @Trace(dispatcher = true, async = true)
+  private void executeCall(Future<MPXResponse> future, Message<JsonObject> request) {
 	  client = createWebClient(vertx);
 	  client.post(iConfigurationCore.getPortOmnix(), iConfigurationCore.getHostOmnix(), iConfigurationCore.getUriOmnix())
       .ssl(true).putHeader(HttpHeaders.CONTENT_LENGTH.toString(), LENGTH)
@@ -89,16 +108,16 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
         if (response.succeeded()) {
           HttpResponse<Buffer> data = response.result();
           Root root = data.bodyAsJsonObject().mapTo(Root.class);
-          message.reply(JsonObject.mapFrom(root));
+          request.reply(JsonObject.mapFrom(root));
         } else {
         	LOGGER.error("ERROR MESSAGE OPERATION ON: ",
               response.cause().getStackTrace().toString());
-          message.fail(response.hashCode(), response.cause().getMessage());
+        	request.fail(response.hashCode(), response.cause().getMessage());
         }
       });
 	  client.close();
   }
-  
+
   /**
    * Create a WebClient 
    * @param vertx value
@@ -108,4 +127,64 @@ public class ProxyChannelVerticle extends ApplicationVerticle {
 	return  WebClient.create(vertx);
 	  
   }
+  /**
+   * Make a MPXResponse when the Circuit Breaker is opened, this reply send an error
+   * 
+   * @param openCircuitError Fail that causes the Circuit Breaker go to open state
+   * @return MPXResponse object, with an error and says that the circuit is open
+   */
+  private MPXResponse replyOnCircuitOpen(Throwable openCircuitError) {
+
+    NewRelic.incrementCounter(
+        "ContentService/ProxyMPX/Counter/Fallback/" + circuitBreaker.state().toString());
+    LOGGER.error("Circuit on open state: " + openCircuitError.getClass().getName(),
+        openCircuitError);
+
+    MPXResponse temporalStatus =
+        new MPXResponse(circuitBreaker.state(), true, openCircuitError.getMessage());
+
+    if (LOGGER.isDebugEnabled()) {
+    	LOGGER.debug("Create Open Circuit reply : " + temporalStatus.toJson().toString());
+    }
+
+    return temporalStatus;
+  }
+
+  private MPXResponse replyOnKillswitch() {
+    return replyOnCircuitOpen(new KillswitchException());
+  }
+
+  /**
+   * Build and send a reply to Event Bus with the search response of MPX
+   * 
+   * @param result response from MPX or Open Circuit Breaker
+   * @param request Original message to do the reply
+   */
+  private void proccessResponse(AsyncResult<MPXResponse> result, Message<JsonObject> request) {
+    if (result.succeeded()) {
+      MPXResponse mpxResponse = result.result();
+      request.reply(mpxResponse.toJson());
+    } else {
+      MPXResponse mpxError =
+          new MPXResponse(CircuitBreakerState.CLOSED, true, result.cause().getMessage());
+      request.reply(mpxError.toJson());
+    }
+
+
+  }
+/*
+  public void onMessage(Message<String> message) {
+
+	    try {
+	    	LOGGER.debug("*** EXECUTE onMessage WS ON OMNIX SERVICE  ***");
+	      jsonObject =JsonUtils.parserQuery(iConfigurationCore.getQueryOmnix(), message.body());
+	      executeClientWebOmnix(message);
+	    } catch (Exception ex) {
+	    	LOGGER.error("***ERROR MESSAGE OPERATION ON: ", ex);
+	      message.fail(ex.hashCode(), ex.getCause().getMessage());
+	    }
+	  }
+
+  */
+  
 }

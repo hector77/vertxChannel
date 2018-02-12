@@ -38,8 +38,10 @@ public class ChannelOperationsImpl  implements IChannelOperations {
 			countryId = Optional.ofNullable(routingContext.request().getParam("countryId"))
 					.orElseThrow(() -> new ChannelException("Invalid country Id"));
 			LOGGER.debug("COUNTRY_ID: " + countryId);
+			 JsonObject data = new JsonObject();
+		      data.put("country", countryId);
 
-			vertx.eventBus().send(IConfigurationCore.EVENT_PROXY_CHANNEL, countryId, response -> {
+			vertx.eventBus().send(IConfigurationCore.EVENT_PROXY_CHANNEL, data, response -> {
 
 				if (response.succeeded()) {
 					routingContext.response().setStatusCode(HttpResponseStatus.OK.code())
